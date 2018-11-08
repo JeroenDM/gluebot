@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: gluebot_support
+    relative_path: urdf/gluebot.xacro
+    xacro_args: "--inorder "
+  SRDF:
+    relative_path: config/gluebot.srdf
+  CONFIG:
+    author_name: todo
+    author_email: todo@gmail.com
+    generated_timestamp: 1540993636
