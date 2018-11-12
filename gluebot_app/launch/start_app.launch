@@ -1,0 +1,4 @@
+<launch>
+  <node name="gluebot_app" type="gluebot_app" pkg="gluebot_app" output="screen"/>
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />>
+</launch>
