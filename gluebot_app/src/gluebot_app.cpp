@@ -216,8 +216,19 @@ int main(int argc, char** argv)
     GluebotApp app(nh);
     app.setTask(task_msg);
 
+    // visualize stuff
+    VisualTools vis;
+
     ROS_INFO("Gluebot app node starting");
     ros::AsyncSpinner async_spinner(3); // Nead more than one thread for difference service calls at once.
     async_spinner.start();
+
+    for (auto f : task)
+    {
+        vis.publishFrame(f);
+    }
+    vis.publishWorkobjectMesh(part_frame_msg);
+
+
     ros::waitForShutdown();
 }
