@@ -19,6 +19,14 @@
 
   <link name="world" />
 
+  <link name="camera_frame"/>
+
+  <joint name="world_to_camera" type="fixed">
+    <parent link="world"/>
+    <child link="camera_frame"/>
+    <origin xyz="-0.25 -0.5 1.25" rpy="0 3.14159 0"/>
+  </joint>
+
   <link name="table">
     <visual>
       <geometry>
@@ -34,9 +42,9 @@
 		  </collision>
   </link>
 
-  <link name="wobj_reference"/>
+  <!-- <link name="wobj_reference"/> -->
 
-  <link name="wobj">
+  <!-- <link name="wobj">
     <visual>
       <geometry>
         <mesh filename="package://gluebot_support/meshes/cilinder_and_square.dae" scale="0.001 0.001 0.001"/>
@@ -49,7 +57,7 @@
 		    </geometry>
 			  <origin rpy="0 0 0" xyz="0 0 0"/>
 		</collision>
-  </link>
+  </link> -->
 
   <link name="glue_gun">
     <visual>
@@ -80,17 +88,17 @@
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
   </joint>
 
-  <joint name="table_to_wobj_reference" type="fixed">
+  <!-- <joint name="table_to_wobj_reference" type="fixed">
     <parent link="table" />
     <child link = "wobj_reference" />
     <origin xyz="0.5 0.0 -0.055" rpy="0.0 0.0 0.0" />
-  </joint>
+  </joint> -->
 
-  <joint name="wobj_reference_to_wobj" type="fixed">
+  <!-- <joint name="wobj_reference_to_wobj" type="fixed">
     <parent link="wobj_reference" />
     <child link = "wobj" />
     <origin xyz="0 0.0 0.0" rpy="0.0 0.0 -${90 * pi / 180}" />
-  </joint>
+  </joint> -->
 
   <joint name="tool0_to_glue_gun" type="fixed">
 		<parent link="tool0"/>
