@@ -43,6 +43,28 @@ class GluebotApp
         task_ = task;
     }
 
+    void setPlannerStartState(std::vector<double>& joint_positions)
+    {
+        // terrible way to change start state of planner
+        // moveit::core::RobotStatePtr current_state = move_group_->getCurrentState();
+        // moveit::core::RobotState start_state = *current_state;
+        // for (auto elem : move_group_->getNamedTargetValues("allZeros"))
+        // {
+        //     start_state.setJointPositions(elem.first, &elem.second);
+        // }
+        // move_group_->setStartState(start_state);
+
+        const ros::V_string joint_names = move_group_->getJointNames();
+        moveit::core::RobotStatePtr current_state = move_group_->getCurrentState();
+        moveit::core::RobotState start_state = *current_state;
+
+        for (std::size_t i = 0; i < joint_names.size(); ++i)
+        {
+            start_state.setJointPositions(joint_names[i], &joint_positions[i]);
+        }
+        move_group_->setStartState(start_state);   
+    }
+
     bool moveHome(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
     {
         ROS_INFO("Received service call to move to home.");
@@ -71,12 +93,7 @@ class GluebotApp
     {
         ROS_INFO("Received service call to plan a path.");
         // reset start state for planner
-        moveit::core::RobotStatePtr current_state = move_group_->getCurrentState();
-        move_group_->setStartState(*current_state);
-
-        // save a copy for later use
-        moveit::core::RobotState start_state = *current_state;
-        const ros::V_string joint_names = move_group_->getJointNames();
+        move_group_->setStartState(*move_group_->getCurrentState());    
 
         //-------------------------------------------------------------------------------------
         move_group_->setPoseTarget(task_[0]);
@@ -97,11 +114,7 @@ class GluebotApp
         // set planner start at end of previous path
         // terrible way to change start state of planner
         std::vector<double> path_end =  approach_plan.trajectory_.joint_trajectory.points.back().positions;
-        for (std::size_t i = 0; i < joint_names.size(); ++i)
-        {
-            start_state.setJointPositions(joint_names[i], &path_end[i]);
-        }
-        move_group_->setStartState(start_state);
+        setPlannerStartState(path_end);
 
         moveit_msgs::RobotTrajectory trajectory;
         const double jump_threshold = 0.0;
@@ -123,22 +136,8 @@ class GluebotApp
         }
 
         //-------------------------------------------------------------------------------------
-        // terrible way to change start state of planner
-        // moveit::core::RobotStatePtr current_state = move_group_->getCurrentState();
-        // moveit::core::RobotState start_state = *current_state;
-        // for (auto elem : move_group_->getNamedTargetValues("allZeros"))
-        // {
-        //     start_state.setJointPositions(elem.first, &elem.second);
-        // }
-        // move_group_->setStartState(start_state);
         path_end = trajectory.joint_trajectory.points.back().positions;
-        for (std::size_t i = 0; i < joint_names.size(); ++i)
-        {
-            start_state.setJointPositions(joint_names[i], &path_end[i]);
-        }
-
-        // now we can change the initial state of the planner and plan back to home
-        move_group_->setStartState(start_state);
+        setPlannerStartState(path_end);
 
         move_group_->setNamedTarget("home");
         MoveitPlan retract_plan;
