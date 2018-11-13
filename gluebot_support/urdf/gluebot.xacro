@@ -85,7 +85,7 @@
   <joint name="table_to_base_link" type="fixed">
     <parent link="table" />
     <child link = "base_link" />
-    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 ${-45 * pi / 180}" />
   </joint>
 
   <!-- <joint name="table_to_wobj_reference" type="fixed">
@@ -103,7 +103,7 @@
   <joint name="tool0_to_glue_gun" type="fixed">
 		<parent link="tool0"/>
 		<child link="glue_gun"/>
-		<origin rpy="0 0 0" xyz="0 0 0"/>
+		<origin rpy="0 0 ${-45 * pi / 180}" xyz="0 0 0"/>
 		<axis xyz="0 0 0"/>
 	</joint>
 
