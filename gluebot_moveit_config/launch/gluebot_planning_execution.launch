@@ -2,6 +2,9 @@
   <!-- The planning and execution components of MoveIt! configured to run -->
   <!-- using the ROS-Industrial interface. -->
 
+ <!-- Remap follow_joint_trajectory -->
+  <remap if="$(arg sim)" from="/follow_joint_trajectory" to="/arm_controller/follow_joint_trajectory"/>
+
   <!-- Non-standard joint names:
        - Create a file [robot_moveit_config]/config/joint_names.yaml
            controller_joint_names: [joint_1, joint_2, ... joint_N]
@@ -27,9 +30,11 @@
   <!-- run the "real robot" interface nodes -->
   <!--   - this typically includes: robot_state, motion_interface, and joint_trajectory_action nodes -->
   <!--   - replace these calls with appropriate robot-specific calls or launch files -->
-  <group unless="$(arg sim)">
-    <include file="$(find ur_bringup)/launch/ur5_bringup.launch" />
-  </group>
+  <!--<group unless="$(arg sim)">-->
+  <!--  <include file="$(find ur_bringup)/launch/ur5_bringup.launch" >-->
+  <!--    <arg name="robot_ip" value="$(arg robot_ip)" />-->
+  <!--  </include>-->
+  <!--</group>-->
 
   <!-- publish the robot state (tf transforms) -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
