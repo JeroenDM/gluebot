@@ -39,7 +39,7 @@ catkin_package(
 ###########
 
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -48,7 +48,7 @@ include_directories(
 # )
 
 add_executable(${PROJECT_NAME}_demo
-  src/demo.cpp
+  src/demo.cpp src/ur5_kin.cpp
 )
 add_executable(${PROJECT_NAME}_ur5_ik_test
   src/ur5_ik_test.cpp
