@@ -6,6 +6,9 @@
 
 #include "gluebot_app/util.h"
 
+#include <ur5_demo_descartes/ur5_robot_model.h>
+#include <descartes_planner/dense_planner.h>
+
 using MoveitPlan = moveit::planning_interface::MoveGroupInterface::Plan;
 
 class GluebotApp
@@ -13,18 +16,21 @@ class GluebotApp
     ros::NodeHandle nh_;
     ros::ServiceServer planServer_, moveHomeServer_, executeServer_;
     moveit::planning_interface::MoveGroupInterfacePtr move_group_;
-    std::vector<MoveitPlan> plans_; // {approach plan, glue plan, retract plan}
+    std::vector<MoveitPlan> plans_;  // {approach plan, glue plan, retract plan}
     bool has_plan_ = false;
-    std::vector<geometry_msgs::Pose> task_; // this should be in the service call in the future
+    std::vector<geometry_msgs::Pose> task_;  // this should be in the service call in the future
+
+    boost::shared_ptr<ur5_demo_descartes::UR5RobotModel> model_;
+    descartes_planner::DensePlanner planner_;
 
   public:
     GluebotApp(ros::NodeHandle& nh)
     {
-        if (!init())
-            std::runtime_error("Could not initialize GluebotApp.");
-        
+        if (!initDescartes())
+            throw std::runtime_error("There was an issue initializing Descartes");
+
         move_group_.reset(new moveit::planning_interface::MoveGroupInterface("manipulator"));
-   
+
         planServer_ = nh_.advertiseService("plan_path", &GluebotApp::plan, this);
         moveHomeServer_ = nh_.advertiseService("move_home", &GluebotApp::moveHome, this);
         executeServer_ = nh_.advertiseService("execute_path", &GluebotApp::execute, this);
@@ -32,9 +38,29 @@ class GluebotApp
         plans_.resize(3);
     }
 
-    bool init()
+    bool initDescartes()
     {
-        // Initialize planners
+        // Create a robot model
+        model_ = boost::make_shared<ur5_demo_descartes::UR5RobotModel>();
+
+        // Define the relevant "frames"
+        const std::string robot_description = "robot_description";
+        const std::string group_name = "manipulator";
+        const std::string world_frame = "world";  // Frame in which tool poses are expressed
+        const std::string tcp_frame = "tool_tip";
+
+        // Using the desired frames, let's initialize Descartes
+        if (!model_->initialize(robot_description, group_name, world_frame, tcp_frame))
+        {
+            ROS_WARN("Descartes RobotModel failed to initialize");
+            return false;
+        }
+
+        if (!planner_.initialize(model_))
+        {
+            ROS_WARN("Descartes Planner failed to initialize");
+            return false;
+        }
         return true;
     }
 
@@ -62,7 +88,7 @@ class GluebotApp
         {
             start_state.setJointPositions(joint_names[i], &joint_positions[i]);
         }
-        move_group_->setStartState(start_state);   
+        move_group_->setStartState(start_state);
     }
 
     bool moveHome(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -86,14 +112,14 @@ class GluebotApp
             res.success = false;
             res.message = "Failed to plan home path.";
             return true;
-        }  
+        }
     }
 
     bool plan(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
     {
         ROS_INFO("Received service call to plan a path.");
         // reset start state for planner
-        move_group_->setStartState(*move_group_->getCurrentState());    
+        move_group_->setStartState(*move_group_->getCurrentState());
 
         //-------------------------------------------------------------------------------------
         move_group_->setPoseTarget(task_[0]);
@@ -113,7 +139,7 @@ class GluebotApp
         //-------------------------------------------------------------------------------------
         // set planner start at end of previous path
         // terrible way to change start state of planner
-        std::vector<double> path_end =  approach_plan.trajectory_.joint_trajectory.points.back().positions;
+        std::vector<double> path_end = approach_plan.trajectory_.joint_trajectory.points.back().positions;
         setPlannerStartState(path_end);
 
         moveit_msgs::RobotTrajectory trajectory;
@@ -194,7 +220,8 @@ int main(int argc, char** argv)
 
     //-------------------------------------------------------------------------------------
     // Here we will get the pose from halcon and convert it to een eigen pose
-    Eigen::Affine3d part_frame = Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI_2 - 0.2, Eigen::Vector3d::UnitZ());
+    Eigen::Affine3d part_frame =
+        Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI_2 - 0.2, Eigen::Vector3d::UnitZ());
     part_frame.translation() << 0.7, -0.1, 0.0;
     geometry_msgs::Pose part_frame_msg;
     tf::poseEigenToMsg(part_frame, part_frame_msg);
@@ -206,9 +233,9 @@ int main(int argc, char** argv)
     std::vector<geometry_msgs::Pose> task_msg;
     for (auto f : task)
     {
-      geometry_msgs::Pose tmp;
-      tf::poseEigenToMsg(f, tmp);
-      task_msg.push_back(tmp);
+        geometry_msgs::Pose tmp;
+        tf::poseEigenToMsg(f, tmp);
+        task_msg.push_back(tmp);
     }
 
     //-------------------------------------------------------------------------------------
@@ -220,7 +247,7 @@ int main(int argc, char** argv)
     VisualTools vis;
 
     ROS_INFO("Gluebot app node starting");
-    ros::AsyncSpinner async_spinner(3); // Nead more than one thread for difference service calls at once.
+    ros::AsyncSpinner async_spinner(3);  // Nead more than one thread for difference service calls at once.
     async_spinner.start();
 
     for (auto f : task)
@@ -228,7 +255,6 @@ int main(int argc, char** argv)
         vis.publishFrame(f);
     }
     vis.publishWorkobjectMesh(part_frame_msg);
-
 
     ros::waitForShutdown();
 }

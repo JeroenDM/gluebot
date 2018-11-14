@@ -72,6 +72,12 @@
   <exec_depend>tf_conversions</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>
 
+  <depend>ur5_demo_descartes</depend>
+  <depend>descartes_trajectory</depend>
+  <depend>descartes_planner</depend>
+  <depend>descartes_utilities</depend>
+  <depend>descartes_core</depend>
+
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

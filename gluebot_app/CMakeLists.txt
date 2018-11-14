@@ -16,6 +16,11 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf_conversions
   trajectory_msgs
+  ur5_demo_descartes
+  descartes_trajectory
+  descartes_planner
+  descartes_utilities
+  descartes_core
 )
 
 ## System dependencies are found with CMake's conventions
