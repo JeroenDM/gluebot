@@ -2,6 +2,26 @@
 #define _GLUEBOT_UTIL_H_
 
 #include <moveit_visual_tools/moveit_visual_tools.h>
+#include <descartes_core/trajectory_pt.h>
+#include <descartes_trajectory/axial_symmetric_pt.h>
+
+std::vector<descartes_core::TrajectoryPtPtr> makeDescartesTrajectory(EigenSTL::vector_Affine3d& path)
+{
+    std::vector<descartes_core::TrajectoryPtPtr> descartes_path;  // return value
+    for (auto& point : path)
+    {
+        descartes_core::TrajectoryPtPtr pt = makeTolerancedCartesianPoint(point);
+        descartes_path.push_back(pt);
+    }
+    return descartes_path;
+}
+
+descartes_core::TrajectoryPtPtr makeTolerancedCartesianPoint(const Eigen::Affine3d& pose)
+{
+    using namespace descartes_core;
+    using namespace descartes_trajectory;
+    return TrajectoryPtPtr(new AxialSymmetricPt(pose, M_PI / 2.0, AxialSymmetricPt::Z_AXIS));
+}
 
 std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
 {
@@ -16,7 +36,7 @@ std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
     waypoint.translation() << 0.0, 0.0, 0.02;
     waypoints.push_back(waypoint);
     int N = 5;
-    double step = 0.15 / ((double) N - 1);
+    double step = 0.15 / ((double)N - 1);
     for (int i = 0; i < N; ++i)
     {
         waypoint.translation()[0] += step;
@@ -24,7 +44,7 @@ std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
     }
     for (int i = 0; i < waypoints.size(); ++i)
     {
-      waypoints[i] = part_frame * waypoints[i];
+        waypoints[i] = part_frame * waypoints[i];
     }
     return waypoints;
 }
