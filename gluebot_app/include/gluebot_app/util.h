@@ -46,7 +46,7 @@ std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
     // Eigen::Affine3d waypoint;
     // tf::poseEigenToMsg(pose, waypoint);
 
-    waypoint.translation() << 0.0, 0.0, 0.02;
+    waypoint.translation() << 0.0, 0.0, 0.0055;
     waypoints.push_back(waypoint);
     int N = 5; // should be +1 because of point above
     double step = 0.15 / ((double)N - 1);
@@ -79,7 +79,7 @@ std::vector<Eigen::Affine3d> createCircleTaskEigen(Eigen::Affine3d part_frame)
     double step_size = 360.0 / (steps-1) * M_PI / 180.0;
     double z_rotation = 0.0;
 
-    for (int i = 0; i < steps; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         // create frame with correct rotation
         Eigen::Affine3d pose = Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());
