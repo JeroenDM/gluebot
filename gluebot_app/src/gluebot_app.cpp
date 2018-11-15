@@ -315,7 +315,8 @@ int main(int argc, char** argv)
     //-------------------------------------------------------------------------------------
     // fixed task, this can be read from file in future?
     // and then maybe transform after reading, to avoid reading again for each new part_frame
-    auto task = createGlueTask(part_frame);
+    //auto task = createGlueTask(part_frame);
+    auto task = createCircleTaskEigen(part_frame);
     std::vector<geometry_msgs::Pose> task_msg;
     for (auto f : task)
     {
@@ -324,6 +325,16 @@ int main(int argc, char** argv)
         task_msg.push_back(tmp);
     }
 
+    // auto task_msg =  createCircleTask();
+    // std::vector<Eigen::Affine3d> task;
+    // for (auto pose : task_msg)
+    // {
+    //     Eigen::Affine3d tmp;
+    //     tf::poseMsgToEigen(pose, tmp);
+    //     tmp = part_frame * tmp;
+    //     task.push_back(tmp);
+    // }
+
     //-------------------------------------------------------------------------------------
     // setup service interface with gui
     GluebotApp app(nh);
@@ -331,6 +342,8 @@ int main(int argc, char** argv)
 
     // visualize stuff
     VisualTools vis;
+    vis.visual_tools_->publishAxisLabeled(part_frame, "PART_FRAME", rvt::LARGE);
+    vis.visual_tools_->trigger();
 
     ROS_INFO("Gluebot app node starting");
     ros::AsyncSpinner async_spinner(3);  // Nead more than one thread for difference service calls at once.

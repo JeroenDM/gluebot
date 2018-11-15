@@ -74,6 +74,7 @@
 		  </collision>
   </link>
 
+  <link name="glue_gun_tip"/>
   <link name="tool_tip"/>
 
   <joint name="world_to_table" type="fixed">
@@ -107,10 +108,17 @@
 		<axis xyz="0 0 0"/>
 	</joint>
 
-	<joint name="glue_gun_to_tool_tip" type="fixed">
+  <joint name="glue_gun_to_glue_tip" type="fixed">
 		<parent link="glue_gun"/>
-		<child link="tool_tip"/>
+		<child link="glue_gun_tip"/>
 		<origin rpy="0 ${45 * pi / 180} 0" xyz="0.009664 0 0.272478"/>
+		<axis xyz="0 0 0"/>
+	</joint>
+
+	<joint name="glue_tip_to_tool_tip" type="fixed">
+		<parent link="glue_gun_tip"/>
+		<child link="tool_tip"/>
+		<origin rpy="0 0 0" xyz="0 0 0.005"/>
 		<axis xyz="0 0 0"/>
 	</joint>
 

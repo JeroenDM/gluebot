@@ -7,6 +7,8 @@
 #include <descartes_core/trajectory_pt.h>
 #include <descartes_trajectory/axial_symmetric_pt.h>
 
+#include <Eigen/Geometry>
+
 void printJointPose(const std::vector<double>& q)
 {
     ROS_INFO_STREAM("Joint Pose ======================");
@@ -57,6 +59,85 @@ std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
     {
         waypoints[i] = part_frame * waypoints[i];
     }
+    return waypoints;
+}
+
+std::vector<Eigen::Affine3d> createCircleTaskEigen(Eigen::Affine3d part_frame)
+{
+    //using namespace Eigen;
+    std::vector<Eigen::Affine3d> waypoints;
+    double radius = 0.02425;
+    double y_rotation = 40.0 * M_PI / 180;
+    struct Position
+    {
+        double x = 0.2 - 0.03485;
+        double y = 0.05;
+        double z = 0.0055;
+    };
+    Position position;
+    int steps = 20;
+    double step_size = 360.0 / (steps-1) * M_PI / 180.0;
+    double z_rotation = 0.0;
+
+    for (int i = 0; i < steps; ++i)
+    {
+        // create frame with correct rotation
+        Eigen::Affine3d pose = Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());
+        pose = pose * Eigen::AngleAxisd(z_rotation, Eigen::Vector3d::UnitZ());
+        pose = pose * Eigen::AngleAxisd(y_rotation, Eigen::Vector3d::UnitY());
+
+        pose.translation()[0] = position.x + radius * std::cos(-z_rotation);
+        pose.translation()[1] = position.y + radius * std::sin(-z_rotation);
+        pose.translation()[2] = position.z;
+
+        waypoints.push_back(pose);
+
+        z_rotation += step_size;
+    }
+
+    for (int i = 0; i < waypoints.size(); ++i)
+    {
+        waypoints[i] = part_frame * waypoints[i];
+    }
+    return waypoints;
+}
+
+std::vector<geometry_msgs::Pose> createCircleTask()
+{
+    std::vector<geometry_msgs::Pose> waypoints;
+    double radius = 0.02425;
+    double y_rotation = 40.0 * M_PI / 180;
+    struct Position
+    {
+        double x = 0.2 - 0.03485;
+        double y = 0.05;
+        double z = 0.0055;
+    };
+    Position position;
+    int steps = 20;
+    double step_size = 360.0 / steps * M_PI / 180.0;
+    double z_rotation = 0.0;
+
+    for (int i = 0; i < steps; ++i)
+    {
+        // create frame with correct rotation
+        Eigen::Affine3d pose = Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());
+        pose = pose * Eigen::AngleAxisd(z_rotation, Eigen::Vector3d::UnitZ());
+        pose = pose * Eigen::AngleAxisd(y_rotation, Eigen::Vector3d::UnitY());
+
+        // go to message format
+        geometry_msgs::Pose waypoint;
+        tf::poseEigenToMsg(pose, waypoint);
+
+        waypoint.position.x = position.x + radius * std::cos(-z_rotation);
+        waypoint.position.y = position.y + radius * std::sin(-z_rotation);
+        waypoint.position.z = position.z;
+
+        waypoints.push_back(waypoint);
+
+        z_rotation += step_size;
+    }
+
     return waypoints;
 }
 
@@ -129,12 +210,14 @@ class VisualTools
         visual_tools_->trigger();
     }
 
+    // For visualizing things in rviz
+    moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
+
   private:
     // A shared node handle
     ros::NodeHandle nh_;
 
-    // For visualizing things in rviz
-    moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
+    
 
     // MoveIt Components
     planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_;
