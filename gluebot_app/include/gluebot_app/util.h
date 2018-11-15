@@ -1,9 +1,27 @@
 #ifndef _GLUEBOT_UTIL_H_
 #define _GLUEBOT_UTIL_H_
 
+#include <ros/ros.h>
+
 #include <moveit_visual_tools/moveit_visual_tools.h>
 #include <descartes_core/trajectory_pt.h>
 #include <descartes_trajectory/axial_symmetric_pt.h>
+
+void printJointPose(const std::vector<double>& q)
+{
+    ROS_INFO_STREAM("Joint Pose ======================");
+    ROS_INFO_STREAM("( " << q[0] << ", "
+    << q[1] << ", " << q[2] << ", "
+    << q[3] << ", " << q[4] << ", "
+    << q[5] << " )");
+}
+
+descartes_core::TrajectoryPtPtr makeTolerancedCartesianPoint(const Eigen::Affine3d& pose)
+{
+    using namespace descartes_core;
+    using namespace descartes_trajectory;
+    return TrajectoryPtPtr(new AxialSymmetricPt(pose, M_PI / 2.0, AxialSymmetricPt::Z_AXIS));
+}
 
 std::vector<descartes_core::TrajectoryPtPtr> makeDescartesTrajectory(EigenSTL::vector_Affine3d& path)
 {
@@ -14,13 +32,6 @@ std::vector<descartes_core::TrajectoryPtPtr> makeDescartesTrajectory(EigenSTL::v
         descartes_path.push_back(pt);
     }
     return descartes_path;
-}
-
-descartes_core::TrajectoryPtPtr makeTolerancedCartesianPoint(const Eigen::Affine3d& pose)
-{
-    using namespace descartes_core;
-    using namespace descartes_trajectory;
-    return TrajectoryPtPtr(new AxialSymmetricPt(pose, M_PI / 2.0, AxialSymmetricPt::Z_AXIS));
 }
 
 std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
@@ -35,7 +46,7 @@ std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
 
     waypoint.translation() << 0.0, 0.0, 0.02;
     waypoints.push_back(waypoint);
-    int N = 5;
+    int N = 5; // should be +1 because of point above
     double step = 0.15 / ((double)N - 1);
     for (int i = 0; i < N; ++i)
     {

@@ -8,6 +8,9 @@
 
 #include <ur5_demo_descartes/ur5_robot_model.h>
 #include <descartes_planner/dense_planner.h>
+#include <descartes_utilities/ros_conversions.h>
+#include <actionlib/client/simple_action_client.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
 
 using MoveitPlan = moveit::planning_interface::MoveGroupInterface::Plan;
 
@@ -22,9 +25,10 @@ class GluebotApp
 
     boost::shared_ptr<ur5_demo_descartes::UR5RobotModel> model_;
     descartes_planner::DensePlanner planner_;
+    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_;
 
   public:
-    GluebotApp(ros::NodeHandle& nh)
+    GluebotApp(ros::NodeHandle& nh) : ac_("joint_trajectory_action", true)
     {
         if (!initDescartes())
             throw std::runtime_error("There was an issue initializing Descartes");
@@ -36,6 +40,13 @@ class GluebotApp
         executeServer_ = nh_.advertiseService("execute_path", &GluebotApp::execute, this);
 
         plans_.resize(3);
+    }
+
+    std::vector<std::string> getJointNames()
+    {
+        std::vector<std::string> names;
+        nh_.getParam("controller_joint_names", names);
+        return names;
     }
 
     bool initDescartes()
@@ -115,6 +126,49 @@ class GluebotApp
         }
     }
 
+    bool runDescartesPlanner(std::vector<double> start_joint_positions, std::vector<trajectory_msgs::JointTrajectoryPoint>& ros_trajectory)
+    {
+        ROS_INFO("Running descartes planner.");
+
+        // convert to format needed by descartes util function
+        EigenSTL::vector_Affine3d task_eigen;
+        for (auto pose : task_)
+        {
+            Eigen::Affine3d tmp;
+            tf::poseMsgToEigen(pose, tmp);
+            task_eigen.push_back(tmp);
+        }
+
+        // create toleranced version of task, starting from the current joint state
+        std::vector<descartes_core::TrajectoryPtPtr> path = makeDescartesTrajectory(task_eigen);
+        descartes_core::TrajectoryPtPtr pt (new descartes_trajectory::JointTrajectoryPt(start_joint_positions));
+        path.front() = pt;
+
+        // set timing
+        double step = 0.5;
+        double t = 0.0;
+        for (auto pt : path)
+        {
+            pt->setTiming( descartes_core::TimingConstraint(t) );
+            t += step;
+        }
+
+        if (!planner_.planPath(path))
+        {
+            return false;
+        }
+
+        std::vector<descartes_core::TrajectoryPtPtr> result;
+        if (!planner_.getPath(result))
+        {
+            return false;
+        }
+
+        // Convert the output trajectory into a ROS-formatted message
+        descartes_utilities::toRosJointPoints(*model_, result, 1.0, ros_trajectory);
+        return true;
+    }
+
     bool plan(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
     {
         ROS_INFO("Received service call to plan a path.");
@@ -140,31 +194,54 @@ class GluebotApp
         // set planner start at end of previous path
         // terrible way to change start state of planner
         std::vector<double> path_end = approach_plan.trajectory_.joint_trajectory.points.back().positions;
-        setPlannerStartState(path_end);
+        printJointPose(path_end);
+        
+        // setPlannerStartState(path_end);
+        // moveit_msgs::RobotTrajectory trajectory;
+        // const double jump_threshold = 0.0;
+        // const double eef_step = 0.01;
+        // double fraction = move_group_->computeCartesianPath(task_, eef_step, jump_threshold, trajectory);
+        // // ROS_INFO_NAMED("tutorial", "Visualizing plan 4 (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
 
-        moveit_msgs::RobotTrajectory trajectory;
-        const double jump_threshold = 0.0;
-        const double eef_step = 0.01;
-        double fraction = move_group_->computeCartesianPath(task_, eef_step, jump_threshold, trajectory);
-        // ROS_INFO_NAMED("tutorial", "Visualizing plan 4 (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
+        // if (fraction == 1.0)
+        // {
+        //     moveit::planning_interface::MoveGroupInterface::Plan task_plan;
+        //     task_plan.trajectory_ = trajectory;
+        //     plans_[1] = task_plan;
+        // }
+        // else
+        // {
+        //     res.success = false;
+        //     res.message = "Failed to plan glue path.";
+        //     return true;
+        // }
+        // path_end = trajectory.joint_trajectory.points.back().positions;
 
-        if (fraction == 1.0)
+        std::vector<trajectory_msgs::JointTrajectoryPoint> ros_trajectory;
+        if (runDescartesPlanner(path_end, ros_trajectory))
         {
+            //ros_trajectory.front().positions = path_end;
+            ROS_INFO("Descartes planning successfull!");
+            ROS_INFO_STREAM("Path length: " << ros_trajectory.size() );
+
             moveit::planning_interface::MoveGroupInterface::Plan task_plan;
-            task_plan.trajectory_ = trajectory;
+            task_plan.trajectory_.joint_trajectory.points = ros_trajectory;
+            task_plan.trajectory_.joint_trajectory.joint_names = getJointNames();
+            task_plan.trajectory_.joint_trajectory.header.frame_id = "/world";
             plans_[1] = task_plan;
         }
-        else
-        {
+        else {
             res.success = false;
-            res.message = "Failed to plan glue path.";
+            res.message = "Failed to plan glue path with descartes.";
             return true;
         }
+        path_end = ros_trajectory.back().positions;
 
         //-------------------------------------------------------------------------------------
-        path_end = trajectory.joint_trajectory.points.back().positions;
-        setPlannerStartState(path_end);
+        
+        
 
+        setPlannerStartState(path_end);
         move_group_->setNamedTarget("home");
         MoveitPlan retract_plan;
         if (move_group_->plan(retract_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS)
@@ -197,8 +274,17 @@ class GluebotApp
         }
 
         bool s0 = (move_group_->execute(plans_[0]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
+        plans_[1].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s1 = (move_group_->execute(plans_[1]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
         bool s2 = (move_group_->execute(plans_[2]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
+        // alternative to execute the plans without moveit
+        // control_msgs::FollowJointTrajectoryGoal goal;
+        // goal.trajectory = plans_[1].trajectory_.joint_trajectory;
+        // ac_.sendGoal(goal);
+        // ac_.waitForResult();
 
         if (!s0 || !s1 || !s2)
         {
