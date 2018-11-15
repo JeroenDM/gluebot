@@ -170,8 +170,13 @@ class GluebotApp
             return true;
         }
 
+        plans_[0].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s0 = (move_group_->execute(plans_[0]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
+        plans_[1].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s1 = (move_group_->execute(plans_[1]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
+        plans_[2].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s2 = (move_group_->execute(plans_[2]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
         if (!s0 || !s1 || !s2)
