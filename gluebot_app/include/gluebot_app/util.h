@@ -79,7 +79,7 @@ std::vector<Eigen::Affine3d> createCircleTaskEigen(Eigen::Affine3d part_frame)
     double step_size = 360.0 / (steps-1) * M_PI / 180.0;
     double z_rotation = 0.0;
 
-    for (int i = 0; i < steps; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         // create frame with correct rotation
         Eigen::Affine3d pose = Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());

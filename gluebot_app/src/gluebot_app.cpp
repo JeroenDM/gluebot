@@ -315,8 +315,8 @@ int main(int argc, char** argv)
     //-------------------------------------------------------------------------------------
     // fixed task, this can be read from file in future?
     // and then maybe transform after reading, to avoid reading again for each new part_frame
-    //auto task = createGlueTask(part_frame);
-    auto task = createCircleTaskEigen(part_frame);
+    auto task = createGlueTask(part_frame);
+    //auto task = createCircleTaskEigen(part_frame);
     std::vector<geometry_msgs::Pose> task_msg;
     for (auto f : task)
     {
