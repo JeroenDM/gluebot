@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# license removed for brevity
 import rospy
 import time
 from std_msgs.msg import String
@@ -22,10 +21,10 @@ def glue_gun_server():
 if __name__ == "__main__":
     #rospy.init_node('glue_gun_server')
 
-    print "testing io-interface"
+    # these commands load up the io_driver (and execute rospy.init command)
     get_states()
-    print "listener has been activated"
     set_states()
+    print("io driver activated")
 
     glue_gun_server()
     rospy.spin()
