@@ -77,6 +77,9 @@
   <depend>descartes_planner</depend>
   <depend>descartes_utilities</depend>
   <depend>descartes_core</depend>
+  <depend>rospy</depend>
+  <depend>ur_driver</depend>
+  <depend>std_srvs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

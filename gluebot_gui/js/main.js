@@ -85,3 +85,56 @@ function moveHome() {
     document.getElementById("moveHome").innerHTML = result.message;
   });
 }
+
+
+var setGlueGunClient = new ROSLIB.Service({
+  ros: ros,
+  name: "/set_glue_gun",
+  serviceType: "std_srvs/SetBool"
+});
+
+var GLUEGUN_STATE = false;
+
+function setGlueGun() {
+  var request;
+
+  if (GLUEGUN_STATE) {
+    request = new ROSLIB.ServiceRequest({
+      data: false
+    });
+
+    setGlueGunClient.callService(request, function(result) {
+      console.log(
+        "Result for service call on " +
+          setGlueGunClient.name +
+          ": " +
+          result.success +
+          " Info: " +
+          result.message
+      );
+    });
+
+    document.getElementById("setGlueGunButton").setAttribute("class", "btn btn-danger");
+    GLUEGUN_STATE = false;
+  }
+  else {
+    request = new ROSLIB.ServiceRequest({
+      data: true
+    });
+
+    setGlueGunClient.callService(request, function(result) {
+      console.log(
+        "Result for service call on " +
+          setGlueGunClient.name +
+          ": " +
+          result.success +
+          " Info: " +
+          result.message
+      );
+    });
+
+    document.getElementById("setGlueGunButton").setAttribute("class", "btn btn-success");
+
+    GLUEGUN_STATE = true;
+  }
+}
