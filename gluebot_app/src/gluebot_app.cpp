@@ -273,11 +273,13 @@ class GluebotApp
             return true;
         }
 
+        //plans_[0].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s0 = (move_group_->execute(plans_[0]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
         plans_[1].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s1 = (move_group_->execute(plans_[1]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
+        //plans_[2].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s2 = (move_group_->execute(plans_[2]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
         // alternative to execute the plans without moveit
@@ -308,7 +310,7 @@ int main(int argc, char** argv)
     // Here we will get the pose from halcon and convert it to een eigen pose
     Eigen::Affine3d part_frame =
         Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI_2 - 0.2, Eigen::Vector3d::UnitZ());
-    part_frame.translation() << 0.7, -0.1, 0.0;
+    part_frame.translation() << 0.7, -0.1, 0;
     geometry_msgs::Pose part_frame_msg;
     tf::poseEigenToMsg(part_frame, part_frame_msg);
 

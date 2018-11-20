@@ -46,7 +46,7 @@ std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
     // Eigen::Affine3d waypoint;
     // tf::poseEigenToMsg(pose, waypoint);
 
-    waypoint.translation() << 0.0, 0.0, 0.02;
+    waypoint.translation() << 0.0, 0.0, 0.0055;
     waypoints.push_back(waypoint);
     int N = 5; // should be +1 because of point above
     double step = 0.15 / ((double)N - 1);
