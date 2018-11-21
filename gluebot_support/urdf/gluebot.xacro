@@ -27,7 +27,7 @@
     <origin xyz="-0.25 -0.5 1.25" rpy="0 3.14159 0"/>
   </joint>
 
-  <link name="table">
+  <!-- <link name="table">
     <visual>
       <geometry>
         <mesh filename="package://gluebot_support/meshes/workcell_aligned.stl"/>
@@ -40,6 +40,36 @@
 		    </geometry>
 			<origin rpy="0 0 0" xyz="0 0 0"/>
 		  </collision>
+  </link> -->
+
+  <link name="frame">
+    <visual>
+      <geometry>
+        <mesh filename="package://gluebot_support/meshes/workcell_ur5_simple.stl"/>
+      </geometry>
+		<origin rpy="0 0 0" xyz="0 0 0"/>
+    </visual>
+		<collision>
+		    <geometry>
+		      <mesh filename="package://gluebot_support/meshes/workcell_ur5_simple.stl"/>
+		    </geometry>
+			<origin rpy="0 0 0" xyz="0 0 0"/>
+		  </collision>
+  </link>
+
+  <link name="table">
+    <visual>
+      <geometry>
+        <box size="0.75 1.2 0.05"/>
+      </geometry>
+		  <origin rpy="0 0 0" xyz="0 0 0"/>
+    </visual>
+		<collision>
+		    <geometry>
+		      <box size="0.75 1.2 0.05"/>>
+		    </geometry>
+			  <origin rpy="0 0 0" xyz="0 0 0"/>
+		</collision>
   </link>
 
   <!-- <link name="wobj_reference"/> -->
@@ -77,14 +107,20 @@
   <link name="glue_gun_tip"/>
   <link name="tool_tip"/>
 
-  <joint name="world_to_table" type="fixed">
+  <joint name="world_to_frame" type="fixed">
     <parent link="world" />
-    <child link = "table" />
+    <child link = "frame" />
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
   </joint>
 
-  <joint name="table_to_base_link" type="fixed">
-    <parent link="table" />
+   <joint name="world_to_table" type="fixed">
+    <parent link="world" />
+    <child link = "table" />
+    <origin xyz="${0.245 + 0.75/2} -0.15 ${-0.05 / 2 - 0.16715}" rpy="0 0 0" />
+  </joint>
+
+  <joint name="world_to_base_link" type="fixed">
+    <parent link="world" />
     <child link = "base_link" />
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 ${-45 * pi / 180}" />
   </joint>
