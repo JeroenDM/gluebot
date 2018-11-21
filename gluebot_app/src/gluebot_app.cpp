@@ -160,7 +160,7 @@ class GluebotApp
         path.front() = pt;
 
         // set timing
-        double step = 0.5;
+        double step = 0.2;
         double t = 0.0;
         for (auto pt : path)
         {
