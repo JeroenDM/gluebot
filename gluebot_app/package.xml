@@ -57,6 +57,8 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>tf_conversions</build_depend>
   <build_depend>trajectory_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+
   <build_export_depend>geometry_msgs</build_export_depend>
   <build_export_depend>moveit_ros_planning_interface</build_export_depend>
   <build_export_depend>moveit_visual_tools</build_export_depend>
@@ -64,6 +66,7 @@
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>tf_conversions</build_export_depend>
   <build_export_depend>trajectory_msgs</build_export_depend>
+
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>moveit_ros_planning_interface</exec_depend>
   <exec_depend>moveit_visual_tools</exec_depend>
@@ -71,6 +74,7 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>tf_conversions</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
 
   <depend>ur5_demo_descartes</depend>
   <depend>descartes_trajectory</depend>

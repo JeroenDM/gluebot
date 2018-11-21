@@ -3,12 +3,12 @@
 import sys
 import rospy
 
-from std_srvs.srv import *
+from gluebot_app.srv import *
 
 def get_pose(val):
     rospy.wait_for_service('/halcon')
     try:
-        ser = rospy.ServiceProxy('/halcon', SetBool)
+        ser = rospy.ServiceProxy('/halcon', GetPose2D)
         res = ser(val)
         return res.message
     except rospy.ServiceException, e:
