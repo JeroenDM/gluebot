@@ -108,10 +108,11 @@
 		<axis xyz="0 0 0"/>
 	</joint>
 
+<!-- <origin rpy="0 ${45 * pi / 180} 0" xyz="0.009664 0 0.272478"/> -->
   <joint name="glue_gun_to_glue_tip" type="fixed">
 		<parent link="glue_gun"/>
 		<child link="glue_gun_tip"/>
-		<origin rpy="0 ${45 * pi / 180} 0" xyz="0.009664 0 0.272478"/>
+		<origin rpy="0 ${45 * pi / 180} 0" xyz="0.01015 0 0.3109"/>
 		<axis xyz="0 0 0"/>
 	</joint>
 
