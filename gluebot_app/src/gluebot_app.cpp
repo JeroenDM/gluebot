@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <std_srvs/Trigger.h>
+#include <std_srvs/SetBool.h>
 #include <eigen_conversions/eigen_msg.h>
 
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -18,6 +19,7 @@ class GluebotApp
 {
     ros::NodeHandle nh_;
     ros::ServiceServer planServer_, moveHomeServer_, executeServer_;
+    ros::ServiceClient glueGunClient_;
     moveit::planning_interface::MoveGroupInterfacePtr move_group_;
     std::vector<MoveitPlan> plans_;  // {approach plan, glue plan, retract plan}
     bool has_plan_ = false;
@@ -38,6 +40,8 @@ class GluebotApp
         planServer_ = nh_.advertiseService("plan_path", &GluebotApp::plan, this);
         moveHomeServer_ = nh_.advertiseService("move_home", &GluebotApp::moveHome, this);
         executeServer_ = nh_.advertiseService("execute_path", &GluebotApp::execute, this);
+
+        glueGunClient_ = nh_.serviceClient<std_srvs::SetBool>("set_glue_gun");
 
         plans_.resize(3);
     }
@@ -100,6 +104,17 @@ class GluebotApp
             start_state.setJointPositions(joint_names[i], &joint_positions[i]);
         }
         move_group_->setStartState(start_state);
+    }
+
+    void setGlueGun(bool val)
+    {
+        std_srvs::SetBool srv;
+        srv.request.data = val;
+        glueGunClient_.call(srv);
+        if (srv.response.success)
+        {
+            ROS_INFO_STREAM("Glue gun service message: " << srv.response.message);
+        }
     }
 
     bool moveHome(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
@@ -277,7 +292,9 @@ class GluebotApp
         bool s0 = (move_group_->execute(plans_[0]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
         plans_[1].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
+        setGlueGun(true);
         bool s1 = (move_group_->execute(plans_[1]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+        setGlueGun(false);
 
         //plans_[2].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s2 = (move_group_->execute(plans_[2]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
