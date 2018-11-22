@@ -16,6 +16,7 @@ s.connect((TCP_IP, TCP_PORT))
 service_msgs = '{"op": "advertise_service", "type": "gluebot_app/GetPose2D", "service": "/halcon"}'
 s.send(service_msgs)
 
+# res += '"values": {"pose": {"x": 0.5645, "y": -0.3488, "theta": -327.99}},'
 # function to create the response string with the same id as the request
 def create_response(request_msg):
   """ create response string
@@ -32,7 +33,7 @@ def create_response(request_msg):
   res = '{ "op": "service_response",'
   res += '"id": ' + request_id + ', '
   res += '"service": "/halcon",'
-  res += '"values": {"pose": {"x": 0.5645, "y": -0.3488, "theta": -327.99}},'
+  res += '"values": {"pose": {"x": 0.6, "y": 0.1, "theta": 0.0}},'
   res += '"result": true'
   res += '}'
   return res

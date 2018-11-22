@@ -6,6 +6,7 @@
 #include <moveit/move_group_interface/move_group_interface.h>
 
 #include "gluebot_app/util.h"
+#include "gluebot_app/visual_tools.h"
 
 #include <ur5_demo_descartes/ur5_robot_model.h>
 #include <descartes_planner/dense_planner.h>
@@ -18,23 +19,31 @@
 
 using MoveitPlan = moveit::planning_interface::MoveGroupInterface::Plan;
 
+const double TABLE_Z = -0.146;
+
 class GluebotApp
 {
     ros::NodeHandle nh_;
     ros::ServiceServer planServer_, moveHomeServer_, executeServer_;
     ros::ServiceClient glueGunClient_, halconClient_;
     moveit::planning_interface::MoveGroupInterfacePtr move_group_;
-    std::vector<MoveitPlan> plans_;  // {approach plan, glue plan, retract plan}
-    bool has_plan_ = false;
-    std::vector<geometry_msgs::Pose> task_;  // this should be in the service call in the future
 
     boost::shared_ptr<ur5_demo_descartes::UR5RobotModel> model_;
     descartes_planner::DensePlanner planner_;
+
+    // state variables related to planning
+    std::vector<MoveitPlan> plans_;  // {approach plan, glue plan, retract plan}
+    bool has_plan_ = false;
+    EigenSTL::vector_Affine3d task_;  // this should be in the service call in the future?
+    Eigen::Affine3d wobj_pose_;
+    
 
     //actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_;
     //  : ac_("joint_trajectory_action", true)
 
     double glue_speed_ = 0.2;
+
+    std::shared_ptr<VisualTools> vis_;
 
   public:
     GluebotApp(ros::NodeHandle& nh)
@@ -54,6 +63,11 @@ class GluebotApp
         plans_.resize(3);
 
         updateGlueSpeed();
+        // put dummy values in wobj_pose (useful for testing)
+        wobj_pose_ = Eigen::Affine3d::Identity();
+        wobj_pose_.translation() << 0.6, 0.1, TABLE_Z;
+
+        vis_.reset(new VisualTools());
     }
 
     void updateGlueSpeed()
@@ -63,22 +77,25 @@ class GluebotApp
         ROS_INFO_STREAM("Glue speed set to: " << glue_speed_);
     }
 
-    geometry_msgs::Pose2D getPoseFromHalcon()
+   bool setWobjPoseFromHalcon()
     {
+        Eigen::Affine3d pose = Eigen::Affine3d::Identity();
         gluebot_app::GetPose2D srv;
         if (halconClient_.call(srv))
         {
             ROS_INFO_STREAM("Halcon pose service call succesfull!");
-            return srv.response.pose;
+            auto pose_2d = srv.response.pose;
+            // rotate around z
+            pose *= Eigen::AngleAxisd(pose_2d.theta * M_PI / 180.0, Eigen::Vector3d::UnitZ());
+            // position in world frame
+            pose.translation() << pose_2d.x, pose_2d.y, TABLE_Z;
+            wobj_pose_ = pose;
+            return true;
         }
         else
         {
             ROS_ERROR_STREAM("Failed to cal halcon service.");
-            geometry_msgs::Pose2D dummy;
-            dummy.x = 0.6;
-            dummy.y = 0.1;
-            dummy.theta = 0;
-            return dummy;
+            return false;
         }
     }
 
@@ -115,7 +132,7 @@ class GluebotApp
         return true;
     }
 
-    void setTask(std::vector<geometry_msgs::Pose>& task)
+    void setTask(EigenSTL::vector_Affine3d& task)
     {
         task_ = task;
     }
@@ -177,22 +194,13 @@ class GluebotApp
         }
     }
 
-    bool runDescartesPlanner(std::vector<double> start_joint_positions,
+    bool runDescartesPlanner(std::vector<double> start_joint_positions, EigenSTL::vector_Affine3d& task,
                              std::vector<trajectory_msgs::JointTrajectoryPoint>& ros_trajectory)
     {
         ROS_INFO("Running descartes planner.");
 
-        // convert to format needed by descartes util function
-        EigenSTL::vector_Affine3d task_eigen;
-        for (auto pose : task_)
-        {
-            Eigen::Affine3d tmp;
-            tf::poseMsgToEigen(pose, tmp);
-            task_eigen.push_back(tmp);
-        }
-
         // create toleranced version of task, starting from the current joint state
-        std::vector<descartes_core::TrajectoryPtPtr> path = makeDescartesTrajectory(task_eigen);
+        std::vector<descartes_core::TrajectoryPtPtr> path = makeDescartesTrajectory(task);
         descartes_core::TrajectoryPtPtr pt(new descartes_trajectory::JointTrajectoryPt(start_joint_positions));
         path.front() = pt;
 
@@ -224,11 +232,31 @@ class GluebotApp
     bool plan(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
     {
         ROS_INFO("Received service call to plan a path.");
+        //-------------------------------------------------------------------------------------
+        // get wobj_pose from halcon and transform task
+        if (setWobjPoseFromHalcon())
+        {
+            vis_->publishWorkobjectMesh(wobj_pose_, "part2.stl");
+            vis_->visual_tools_->publishAxisLabeled(wobj_pose_, "PART_FRAME", rvt::MEDIUM);
+            vis_->visual_tools_->trigger();
+        }
+        else
+        {
+            res.success = false;
+            res.message = "Failed to get pose from halcon.";
+            return true;
+        }
+        
+        EigenSTL::vector_Affine3d transformed_task;
+        for (auto pose : task_) transformed_task.push_back(wobj_pose_ * pose);
+        for (auto f : transformed_task) vis_->publishFrame(f);
+
+        //-------------------------------------------------------------------------------------
         // reset start state for planner
         move_group_->setStartState(*move_group_->getCurrentState());
 
         //-------------------------------------------------------------------------------------
-        move_group_->setPoseTarget(task_[0]);
+        move_group_->setPoseTarget(transformed_task[0]);
         MoveitPlan approach_plan;
         if (move_group_->plan(approach_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS)
         {
@@ -248,29 +276,8 @@ class GluebotApp
         std::vector<double> path_end = approach_plan.trajectory_.joint_trajectory.points.back().positions;
         printJointPose(path_end);
 
-        // setPlannerStartState(path_end);
-        // moveit_msgs::RobotTrajectory trajectory;
-        // const double jump_threshold = 0.0;
-        // const double eef_step = 0.01;
-        // double fraction = move_group_->computeCartesianPath(task_, eef_step, jump_threshold, trajectory);
-        // // ROS_INFO_NAMED("tutorial", "Visualizing plan 4 (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
-
-        // if (fraction == 1.0)
-        // {
-        //     moveit::planning_interface::MoveGroupInterface::Plan task_plan;
-        //     task_plan.trajectory_ = trajectory;
-        //     plans_[1] = task_plan;
-        // }
-        // else
-        // {
-        //     res.success = false;
-        //     res.message = "Failed to plan glue path.";
-        //     return true;
-        // }
-        // path_end = trajectory.joint_trajectory.points.back().positions;
-
         std::vector<trajectory_msgs::JointTrajectoryPoint> ros_trajectory;
-        if (runDescartesPlanner(path_end, ros_trajectory))
+        if (runDescartesPlanner(path_end, transformed_task, ros_trajectory))
         {
             // ros_trajectory.front().positions = path_end;
             ROS_INFO("Descartes planning successfull!");
@@ -336,12 +343,6 @@ class GluebotApp
         // plans_[2].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s2 = (move_group_->execute(plans_[2]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
-        // alternative to execute the plans without moveit
-        // control_msgs::FollowJointTrajectoryGoal goal;
-        // goal.trajectory = plans_[1].trajectory_.joint_trajectory;
-        // ac_.sendGoal(goal);
-        // ac_.waitForResult();
-
         if (!s0 || !s1 || !s2)
         {
             res.success = false;
@@ -363,63 +364,17 @@ int main(int argc, char** argv)
     // setup service interface with gui
     GluebotApp app(nh);
 
-    //-------------------------------------------------------------------------------------
-    // Here we will get the pose from halcon and convert it to een eigen pose
-    auto halcon_pose = app.getPoseFromHalcon();
-    ROS_INFO_STREAM(halcon_pose);
-
-    // halcon pose to eigen frame
-    double angle = halcon_pose.theta * M_PI / 180.0;
-    Eigen::Affine3d part_frame =
-        Eigen::Affine3d::Identity() * Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ());
-    part_frame.translation() << halcon_pose.x, halcon_pose.y, -0.146;
-
-    geometry_msgs::Pose part_frame_msg;
-    tf::poseEigenToMsg(part_frame, part_frame_msg);
-
-    //-------------------------------------------------------------------------------------
-    // fixed task, this can be read from file in future?
-    // and then maybe transform after reading, to avoid reading again for each new part_frame
-    // auto task = createGlueTask(part_frame);
-    // auto task = createCircleTaskEigen(part_frame);
     Eigen::Vector3d start, end;
     start << 0.01, -0.03705, 0.015;
     end << 0.09, -0.03705, 0.015;
-    auto task_relative = createLine(start, end);
+    auto task = createLine(start, end);
 
-    // transform task to the current pose of the work object
-    std::vector<Eigen::Affine3d> task;
-    for (auto pose : task_relative)
-        task.push_back(part_frame * pose);
+    app.setTask(task);
 
-    // convert to ros message format
-    std::vector<geometry_msgs::Pose> task_msg;
-    for (auto f : task)
-    {
-        geometry_msgs::Pose tmp;
-        tf::poseEigenToMsg(f, tmp);
-        task_msg.push_back(tmp);
-    }
 
-    //-------------------------------------------------------------------------------------
-    
-    app.setTask(task_msg);
-
-    // visualize stuff
-    VisualTools vis;
-    vis.visual_tools_->publishAxisLabeled(part_frame, "PART_FRAME", rvt::MEDIUM);
-    vis.visual_tools_->trigger();
-
-    ROS_INFO("Gluebot app node starting");
     ros::AsyncSpinner async_spinner(3);  // Nead more than one thread for difference service calls at once.
     async_spinner.start();
 
-    // publish part to planning scene
-    vis.publishWorkobjectMesh(part_frame_msg, "part2.stl");
-
-    // visualize glue path
-    for (auto f : task)
-        vis.publishFrame(f);
 
     ros::waitForShutdown();
 }
