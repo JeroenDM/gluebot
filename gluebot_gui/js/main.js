@@ -31,7 +31,6 @@ function planPath() {
 
   planPathClient.callService(request, function(result) {
     console.log(
-      "Result for service call on " +
         planPathClient.name +
         ": " +
         result.success +
@@ -53,7 +52,6 @@ function executePath() {
 
   executePathService.callService(request, function(result) {
     console.log(
-      "Result for service call on " +
         executePathService.name +
         ": " +
         result.success +
@@ -75,7 +73,6 @@ function moveHome() {
 
   moveHomeClient.callService(request, function(result) {
     console.log(
-      "Result for service call on " +
         moveHomeClient.name +
         ": " +
         result.success +
@@ -105,7 +102,6 @@ function setGlueGun() {
 
     setGlueGunClient.callService(request, function(result) {
       console.log(
-        "Result for service call on " +
           setGlueGunClient.name +
           ": " +
           result.success +
@@ -124,7 +120,6 @@ function setGlueGun() {
 
     setGlueGunClient.callService(request, function(result) {
       console.log(
-        "Result for service call on " +
           setGlueGunClient.name +
           ": " +
           result.success +

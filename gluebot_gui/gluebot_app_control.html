@@ -16,10 +16,15 @@
   <div class="row">
     <div class="col">
         <h1>Gluebot App</h1>
-        <p>First, launch the rosdriver for the UR5. The ip adress of the computer should be in the same range. Then launch the rviz and moveit setup. Now start the gluebot app. And finally refresh this page.</p>
+        <p>Before running the planning app, the halcon ros communication should be fixed. The gluebot app used the default port 9090, so we should use another number here.</p>
+        <pre><code>
+          roslaunch rosbridge_server rosbridge_tcp port:=9091
+        </code></pre>
+        <p>Now start the halcon program.</p>
+        <p>To setup the gluebot app, first launch the rosdriver for the UR5. The ip adress of the computer should be in the same range. Then launch the rviz and moveit setup. Now start the gluebot app. And finally refresh this page.</p>
         <pre><code>
           roslaunch ur_bringup ur5_bringup.launch robot_ip:=192.168.1.5
-          roslaunch gluebot_support setup.launch
+          roslaunch gluebot_moveit_config gluebot_planning_execution.launch sim:=false
           roslaunch gluebot_app start_app.launch
         </code></pre>
     </div>
