@@ -141,7 +141,8 @@ class GluebotApp
         }
     }
 
-    bool runDescartesPlanner(std::vector<double> start_joint_positions, std::vector<trajectory_msgs::JointTrajectoryPoint>& ros_trajectory)
+    bool runDescartesPlanner(std::vector<double> start_joint_positions,
+                             std::vector<trajectory_msgs::JointTrajectoryPoint>& ros_trajectory)
     {
         ROS_INFO("Running descartes planner.");
 
@@ -156,7 +157,7 @@ class GluebotApp
 
         // create toleranced version of task, starting from the current joint state
         std::vector<descartes_core::TrajectoryPtPtr> path = makeDescartesTrajectory(task_eigen);
-        descartes_core::TrajectoryPtPtr pt (new descartes_trajectory::JointTrajectoryPt(start_joint_positions));
+        descartes_core::TrajectoryPtPtr pt(new descartes_trajectory::JointTrajectoryPt(start_joint_positions));
         path.front() = pt;
 
         // set timing
@@ -164,7 +165,7 @@ class GluebotApp
         double t = 0.0;
         for (auto pt : path)
         {
-            pt->setTiming( descartes_core::TimingConstraint(t) );
+            pt->setTiming(descartes_core::TimingConstraint(t));
             t += step;
         }
 
@@ -210,7 +211,7 @@ class GluebotApp
         // terrible way to change start state of planner
         std::vector<double> path_end = approach_plan.trajectory_.joint_trajectory.points.back().positions;
         printJointPose(path_end);
-        
+
         // setPlannerStartState(path_end);
         // moveit_msgs::RobotTrajectory trajectory;
         // const double jump_threshold = 0.0;
@@ -235,9 +236,9 @@ class GluebotApp
         std::vector<trajectory_msgs::JointTrajectoryPoint> ros_trajectory;
         if (runDescartesPlanner(path_end, ros_trajectory))
         {
-            //ros_trajectory.front().positions = path_end;
+            // ros_trajectory.front().positions = path_end;
             ROS_INFO("Descartes planning successfull!");
-            ROS_INFO_STREAM("Path length: " << ros_trajectory.size() );
+            ROS_INFO_STREAM("Path length: " << ros_trajectory.size());
 
             moveit::planning_interface::MoveGroupInterface::Plan task_plan;
             task_plan.trajectory_.joint_trajectory.points = ros_trajectory;
@@ -245,7 +246,8 @@ class GluebotApp
             task_plan.trajectory_.joint_trajectory.header.frame_id = "/world";
             plans_[1] = task_plan;
         }
-        else {
+        else
+        {
             res.success = false;
             res.message = "Failed to plan glue path with descartes.";
             return true;
@@ -253,8 +255,6 @@ class GluebotApp
         path_end = ros_trajectory.back().positions;
 
         //-------------------------------------------------------------------------------------
-        
-        
 
         setPlannerStartState(path_end);
         move_group_->setNamedTarget("home");
@@ -288,7 +288,7 @@ class GluebotApp
             return true;
         }
 
-        //plans_[0].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
+        // plans_[0].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s0 = (move_group_->execute(plans_[0]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
         plans_[1].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
@@ -296,7 +296,7 @@ class GluebotApp
         bool s1 = (move_group_->execute(plans_[1]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
         setGlueGun(false);
 
-        //plans_[2].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
+        // plans_[2].trajectory_.joint_trajectory.header.stamp = ros::Time::now();
         bool s2 = (move_group_->execute(plans_[2]) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
 
         // alternative to execute the plans without moveit
@@ -334,8 +334,19 @@ int main(int argc, char** argv)
     //-------------------------------------------------------------------------------------
     // fixed task, this can be read from file in future?
     // and then maybe transform after reading, to avoid reading again for each new part_frame
-    auto task = createGlueTask(part_frame);
-    //auto task = createCircleTaskEigen(part_frame);
+    // auto task = createGlueTask(part_frame);
+    // auto task = createCircleTaskEigen(part_frame);
+    Eigen::Vector3d start, end;
+    start << 0.01, -0.03705, 0.0055;
+    end << 0.09, -0.03705, 0;
+    auto task_relative = createLine(start, end);
+
+    // transform task to the current pose of the work object
+    std::vector<Eigen::Affine3d> task;
+    for (auto pose : task_relative)
+        task.push_back(part_frame * pose);
+
+    // convert to ros message format
     std::vector<geometry_msgs::Pose> task_msg;
     for (auto f : task)
     {
@@ -344,16 +355,6 @@ int main(int argc, char** argv)
         task_msg.push_back(tmp);
     }
 
-    // auto task_msg =  createCircleTask();
-    // std::vector<Eigen::Affine3d> task;
-    // for (auto pose : task_msg)
-    // {
-    //     Eigen::Affine3d tmp;
-    //     tf::poseMsgToEigen(pose, tmp);
-    //     tmp = part_frame * tmp;
-    //     task.push_back(tmp);
-    // }
-
     //-------------------------------------------------------------------------------------
     // setup service interface with gui
     GluebotApp app(nh);
@@ -361,18 +362,19 @@ int main(int argc, char** argv)
 
     // visualize stuff
     VisualTools vis;
-    vis.visual_tools_->publishAxisLabeled(part_frame, "PART_FRAME", rvt::LARGE);
+    vis.visual_tools_->publishAxisLabeled(part_frame, "PART_FRAME", rvt::MEDIUM);
     vis.visual_tools_->trigger();
 
     ROS_INFO("Gluebot app node starting");
     ros::AsyncSpinner async_spinner(3);  // Nead more than one thread for difference service calls at once.
     async_spinner.start();
 
+    // publish part to planning scene
+    vis.publishWorkobjectMesh(part_frame_msg, "part2.stl");
+
+    // visualize glue path
     for (auto f : task)
-    {
         vis.publishFrame(f);
-    }
-    vis.publishWorkobjectMesh(part_frame_msg);
 
     ros::waitForShutdown();
 }

@@ -36,6 +36,23 @@ std::vector<descartes_core::TrajectoryPtPtr> makeDescartesTrajectory(EigenSTL::v
     return descartes_path;
 }
 
+std::vector<Eigen::Affine3d> createLine(Eigen::Vector3d start, Eigen::Vector3d end)
+{
+    std::vector<Eigen::Affine3d> waypoints;
+    Eigen::Affine3d waypoint;
+    int N = 5;
+    Eigen::Vector3d step = (end - start) / N;
+
+    for (std::size_t i = 0; i < N; ++i)
+    {
+        waypoint = Eigen::Translation3d(start + i * step);
+        waypoint *= Eigen::AngleAxisd(-M_PI_2, Eigen::Vector3d::UnitZ());
+        waypoint *= Eigen::AngleAxisd(M_PI + 0.5, Eigen::Vector3d::UnitY());
+        waypoints.push_back(waypoint);
+    }
+    return waypoints;
+}
+
 std::vector<Eigen::Affine3d> createGlueTask(Eigen::Affine3d part_frame)
 {
     std::vector<Eigen::Affine3d> waypoints;
@@ -184,7 +201,7 @@ class VisualTools
         visual_tools_->publishText(pose_copy, label, rvt::WHITE, rvt::LARGE, false);
     }
 
-    void publishWorkobjectMesh(geometry_msgs::Pose pose)
+    void publishWorkobjectMesh(geometry_msgs::Pose pose, const std::string name = "part.stl")
     {
         ROS_INFO_STREAM_NAMED("visual_tools", "Publishing Collision Mesh");
         std::string file_path = "file://" + ros::package::getPath("gluebot_support");
@@ -192,7 +209,8 @@ class VisualTools
             ROS_FATAL_STREAM_NAMED("visual_tools", "Unable to get "
                                                        << "gluebot_support"
                                                        << " package path ");
-        file_path.append("/meshes/part.stl");
+        file_path.append("/meshes/");
+        file_path.append(name);
         visual_tools_->publishCollisionMesh(pose, "Part", file_path, rvt::CYAN);
         // Send ROS messages and give it some time to do it
         visual_tools_->triggerPlanningSceneUpdate();
