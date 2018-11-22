@@ -29,7 +29,7 @@ class GluebotApp
     descartes_planner::DensePlanner planner_;
     actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_;
 
-    double glue_speed_;
+    double glue_speed_ = 0.2;
 
   public:
     GluebotApp(ros::NodeHandle& nh) : ac_("joint_trajectory_action", true)
@@ -47,6 +47,11 @@ class GluebotApp
 
         plans_.resize(3);
 
+        updateGlueSpeed();
+    }
+
+    void updateGlueSpeed()
+    {
         if (nh_.hasParam("glue_speed")) nh_.getParam("glue_speed", glue_speed_);
         else glue_speed_ = 0.2;
         ROS_INFO_STREAM("Glue speed set to: " << glue_speed_);
@@ -286,6 +291,7 @@ class GluebotApp
     bool execute(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
     {
         ROS_INFO("Received service call to execute plan.");
+        updateGlueSpeed();
 
         if (!has_plan_)
         {
