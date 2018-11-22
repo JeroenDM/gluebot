@@ -19,7 +19,7 @@ class GluebotApp
 {
     ros::NodeHandle nh_;
     ros::ServiceServer planServer_, moveHomeServer_, executeServer_;
-    ros::ServiceClient glueGunClient_;
+    ros::ServiceClient glueGunClient_, halconClient;
     moveit::planning_interface::MoveGroupInterfacePtr move_group_;
     std::vector<MoveitPlan> plans_;  // {approach plan, glue plan, retract plan}
     bool has_plan_ = false;
@@ -46,6 +46,7 @@ class GluebotApp
         executeServer_ = nh_.advertiseService("execute_path", &GluebotApp::execute, this);
 
         glueGunClient_ = nh_.serviceClient<std_srvs::SetBool>("set_glue_gun");
+        //halconClient_ = nh_.serviceClient<gluebot_app::Ge
 
         plans_.resize(3);
 
@@ -339,9 +340,11 @@ int main(int argc, char** argv)
 
     //-------------------------------------------------------------------------------------
     // Here we will get the pose from halcon and convert it to een eigen pose
+    double angle = (74.26)  * M_PI / 180.0;
     Eigen::Affine3d part_frame =
-        Eigen::Affine3d::Identity() * Eigen::AngleAxisd(M_PI_2 - 0.2, Eigen::Vector3d::UnitZ());
-    part_frame.translation() << 0.7, -0.1, 0;
+        Eigen::Affine3d::Identity() * Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ());
+    //part_frame.translation() << 0.7, -0.1, 0;
+    part_frame.translation() << 0.6824, -0.2512, -0.146;
     geometry_msgs::Pose part_frame_msg;
     tf::poseEigenToMsg(part_frame, part_frame_msg);
 
@@ -351,8 +354,8 @@ int main(int argc, char** argv)
     // auto task = createGlueTask(part_frame);
     // auto task = createCircleTaskEigen(part_frame);
     Eigen::Vector3d start, end;
-    start << 0.01, -0.03705, 0.0055;
-    end << 0.09, -0.03705, 0;
+    start << 0.01, -0.03705, 0.015;
+    end << 0.09, -0.03705, 0.015;
     auto task_relative = createLine(start, end);
 
     // transform task to the current pose of the work object
