@@ -5,7 +5,7 @@ import json
 
 # settings
 TCP_IP = 'localhost'
-TCP_PORT = 9090
+TCP_PORT = 9091
 BUFFER_SIZE = 1024
 
 # connect to rosbridge server
@@ -32,7 +32,7 @@ def create_response(request_msg):
   res = '{ "op": "service_response",'
   res += '"id": ' + request_id + ', '
   res += '"service": "/halcon",'
-  res += '"values": {"pose": {"x": 0.1, "y": 0.2, "theta": 0.3}},'
+  res += '"values": {"pose": {"x": 0.5645, "y": -0.3488, "theta": -327.99}},'
   res += '"result": true'
   res += '}'
   return res

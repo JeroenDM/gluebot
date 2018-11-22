@@ -13,13 +13,16 @@
 #include <actionlib/client/simple_action_client.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
 
+#include <gluebot_app/GetPose2D.h>
+#include <geometry_msgs/Pose2D.h>
+
 using MoveitPlan = moveit::planning_interface::MoveGroupInterface::Plan;
 
 class GluebotApp
 {
     ros::NodeHandle nh_;
     ros::ServiceServer planServer_, moveHomeServer_, executeServer_;
-    ros::ServiceClient glueGunClient_, halconClient;
+    ros::ServiceClient glueGunClient_, halconClient_;
     moveit::planning_interface::MoveGroupInterfacePtr move_group_;
     std::vector<MoveitPlan> plans_;  // {approach plan, glue plan, retract plan}
     bool has_plan_ = false;
@@ -46,7 +49,7 @@ class GluebotApp
         executeServer_ = nh_.advertiseService("execute_path", &GluebotApp::execute, this);
 
         glueGunClient_ = nh_.serviceClient<std_srvs::SetBool>("set_glue_gun");
-        //halconClient_ = nh_.serviceClient<gluebot_app::Ge
+        halconClient_ = nh_.serviceClient<gluebot_app::GetPose2D>("halcon");
 
         plans_.resize(3);
 
@@ -58,6 +61,25 @@ class GluebotApp
         if (nh_.hasParam("glue_speed")) nh_.getParam("glue_speed", glue_speed_);
         else glue_speed_ = 0.2;
         ROS_INFO_STREAM("Glue speed set to: " << glue_speed_);
+    }
+
+    geometry_msgs::Pose2D getPoseFromHalcon()
+    {
+        gluebot_app::GetPose2D srv;
+        if (halconClient_.call(srv))
+        {
+            ROS_INFO_STREAM("Halcon pose service call succesfull!");
+            return srv.response.pose;
+        }
+        else
+        {
+            ROS_ERROR_STREAM("Failed to cal halcon service.");
+            geometry_msgs::Pose2D dummy;
+            dummy.x = 0.6;
+            dummy.y = 0.1;
+            dummy.theta = 0;
+            return dummy;
+        }
     }
 
     std::vector<std::string> getJointNames()
@@ -338,13 +360,20 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "gluebot_app");
     ros::NodeHandle nh;
 
+    // setup service interface with gui
+    GluebotApp app(nh);
+
     //-------------------------------------------------------------------------------------
     // Here we will get the pose from halcon and convert it to een eigen pose
-    double angle = (74.26)  * M_PI / 180.0;
+    auto halcon_pose = app.getPoseFromHalcon();
+    ROS_INFO_STREAM(halcon_pose);
+
+    // halcon pose to eigen frame
+    double angle = halcon_pose.theta * M_PI / 180.0;
     Eigen::Affine3d part_frame =
         Eigen::Affine3d::Identity() * Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ());
-    //part_frame.translation() << 0.7, -0.1, 0;
-    part_frame.translation() << 0.6824, -0.2512, -0.146;
+    part_frame.translation() << halcon_pose.x, halcon_pose.y, -0.146;
+
     geometry_msgs::Pose part_frame_msg;
     tf::poseEigenToMsg(part_frame, part_frame_msg);
 
@@ -373,8 +402,7 @@ int main(int argc, char** argv)
     }
 
     //-------------------------------------------------------------------------------------
-    // setup service interface with gui
-    GluebotApp app(nh);
+    
     app.setTask(task_msg);
 
     // visualize stuff
