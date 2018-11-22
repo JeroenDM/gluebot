@@ -53,7 +53,7 @@ class GluebotApp
 
         move_group_.reset(new moveit::planning_interface::MoveGroupInterface("manipulator"));
 
-        planServer_ = nh_.advertiseService("plan_path", &GluebotApp::plan, this);
+        planServer_ = nh_.advertiseService("plan_path", &GluebotApp::plan2, this);
         moveHomeServer_ = nh_.advertiseService("move_home", &GluebotApp::moveHome, this);
         executeServer_ = nh_.advertiseService("execute_path", &GluebotApp::execute, this);
 
@@ -229,6 +229,39 @@ class GluebotApp
         return true;
     }
 
+    bool runDescartesPlanner(EigenSTL::vector_Affine3d& task,
+                             std::vector<trajectory_msgs::JointTrajectoryPoint>& ros_trajectory)
+    {
+        ROS_INFO("Running descartes planner.");
+
+        // create toleranced version of task, starting from the current joint state
+        std::vector<descartes_core::TrajectoryPtPtr> path = makeDescartesTrajectory(task);
+
+        // set timing
+        double step = 0.2;
+        double t = 0.0;
+        for (auto pt : path)
+        {
+            pt->setTiming(descartes_core::TimingConstraint(t));
+            t += step;
+        }
+
+        if (!planner_.planPath(path))
+        {
+            return false;
+        }
+
+        std::vector<descartes_core::TrajectoryPtPtr> result;
+        if (!planner_.getPath(result))
+        {
+            return false;
+        }
+
+        // Convert the output trajectory into a ROS-formatted message
+        descartes_utilities::toRosJointPoints(*model_, result, 1.0, ros_trajectory);
+        return true;
+    }
+
     bool plan(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
     {
         ROS_INFO("Received service call to plan a path.");
@@ -296,6 +329,98 @@ class GluebotApp
             return true;
         }
         path_end = ros_trajectory.back().positions;
+
+        //-------------------------------------------------------------------------------------
+
+        setPlannerStartState(path_end);
+        move_group_->setNamedTarget("home");
+        MoveitPlan retract_plan;
+        if (move_group_->plan(retract_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS)
+        {
+            ROS_INFO("Retract plan successfully planned.");
+            plans_[2] = retract_plan;
+        }
+        else
+        {
+            res.success = false;
+            res.message = "Failed to plan retract path.";
+            return true;
+        }
+
+        res.success = true;
+        res.message = "Planned a successful path!";
+        has_plan_ = true;
+        return true;
+    }
+
+    bool plan2(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res)
+    {
+        ROS_INFO("Received service call to plan a path.");
+        //-------------------------------------------------------------------------------------
+        // get wobj_pose from halcon and transform task
+        if (setWobjPoseFromHalcon())
+        {
+            vis_->visual_tools_->deleteAllMarkers();
+            vis_->visual_tools_->removeAllCollisionObjects();
+            //visual_tools_->triggerPlanningSceneUpdate();
+            vis_->publishWorkobjectMesh(wobj_pose_, "part2.stl");
+            vis_->visual_tools_->publishAxisLabeled(wobj_pose_, "PART_FRAME", rvt::MEDIUM);
+            vis_->visual_tools_->trigger();
+        }
+        else
+        {
+            res.success = false;
+            res.message = "Failed to get pose from halcon.";
+            return true;
+        }
+        
+        EigenSTL::vector_Affine3d transformed_task;
+        for (auto pose : task_) transformed_task.push_back(wobj_pose_ * pose);
+        for (auto f : transformed_task) vis_->publishFrame(f);
+
+        //-------------------------------------------------------------------------------------
+        //--- PLAN GLUE PATH ---
+
+        std::vector<trajectory_msgs::JointTrajectoryPoint> ros_trajectory;
+        if (runDescartesPlanner(transformed_task, ros_trajectory))
+        {
+            // ros_trajectory.front().positions = path_end;
+            ROS_INFO("Descartes planning successfull!");
+            ROS_INFO_STREAM("Path length: " << ros_trajectory.size());
+
+            moveit::planning_interface::MoveGroupInterface::Plan task_plan;
+            task_plan.trajectory_.joint_trajectory.points = ros_trajectory;
+            task_plan.trajectory_.joint_trajectory.joint_names = getJointNames();
+            task_plan.trajectory_.joint_trajectory.header.frame_id = "/world";
+            plans_[1] = task_plan;
+        }
+        else
+        {
+            res.success = false;
+            res.message = "Failed to plan glue path with descartes.";
+            return true;
+        }
+
+        auto path_start = ros_trajectory.front().positions;
+        auto path_end = ros_trajectory.back().positions;
+
+        //-------------------------------------------------------------------------------------
+        //--- PLAN APPROAUCH PATH: home -> path_start
+        // reset start state for planner
+        move_group_->setStartState(*move_group_->getCurrentState());
+        move_group_->setJointValueTarget(path_start);
+        MoveitPlan approach_plan;
+        if (move_group_->plan(approach_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS)
+        {
+            ROS_INFO("Approach plan succesfully planned.");
+            plans_[0] = approach_plan;
+        }
+        else
+        {
+            res.success = false;
+            res.message = "Failed to plan approach path.";
+            return true;
+        }
 
         //-------------------------------------------------------------------------------------
 
