@@ -27,12 +27,14 @@ class GluebotApp
 
     boost::shared_ptr<ur5_demo_descartes::UR5RobotModel> model_;
     descartes_planner::DensePlanner planner_;
-    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_;
+
+    //actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> ac_;
+    //  : ac_("joint_trajectory_action", true)
 
     double glue_speed_ = 0.2;
 
   public:
-    GluebotApp(ros::NodeHandle& nh) : ac_("joint_trajectory_action", true)
+    GluebotApp(ros::NodeHandle& nh)
     {
         if (!initDescartes())
             throw std::runtime_error("There was an issue initializing Descartes");
