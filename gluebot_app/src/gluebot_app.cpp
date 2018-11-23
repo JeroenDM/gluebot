@@ -489,6 +489,7 @@ int main(int argc, char** argv)
     // setup service interface with gui
     GluebotApp app(nh);
 
+    // define a task relative to the work piece
     Eigen::Vector3d start, end;
     start << 0.01, -0.03705, 0.015;
     end << 0.09, -0.03705, 0.015;
@@ -496,8 +497,8 @@ int main(int argc, char** argv)
 
     app.setTask(task);
 
-
-    ros::AsyncSpinner async_spinner(3);  // Nead more than one thread for difference service calls at once.
+    // Whe need more than one async thread to run all the services
+    ros::AsyncSpinner async_spinner(4);
     async_spinner.start();
 
 
