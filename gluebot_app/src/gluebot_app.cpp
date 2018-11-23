@@ -19,7 +19,7 @@
 
 using MoveitPlan = moveit::planning_interface::MoveGroupInterface::Plan;
 
-const double TABLE_Z = -0.146;
+const double TABLE_Z = -0.140;
 
 class GluebotApp
 {
