@@ -86,7 +86,7 @@ class GluebotApp
             ROS_INFO_STREAM("Halcon pose service call succesfull!");
             auto pose_2d = srv.response.pose;
             // rotate around z
-            pose *= Eigen::AngleAxisd(pose_2d.theta * M_PI / 180.0, Eigen::Vector3d::UnitZ());
+            pose *= Eigen::AngleAxisd(-pose_2d.theta * M_PI / 180.0, Eigen::Vector3d::UnitZ());
             // position in world frame
             pose.translation() << pose_2d.x, pose_2d.y, TABLE_Z;
             wobj_pose_ = pose;
