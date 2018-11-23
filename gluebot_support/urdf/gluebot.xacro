@@ -138,15 +138,15 @@
   <link name="glue_gun">
     <visual>
       <geometry>
-        <mesh filename="package://gluebot_support/meshes/visual/GlueBot4.stl" scale="0.01 0.01 0.01"/>
+        <mesh filename="package://gluebot_support/meshes/tool.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-		<origin rpy="0 0 0" xyz="0.043 0.043 0"/>
+		<origin rpy="0 0 0" xyz="0.044 -0.044 0.0141"/>
     </visual>
 		<collision>
 		    <geometry>
-		      <mesh filename="package://gluebot_support/meshes/collision/GlueBot4.stl" scale="0.01 0.01 0.01"/>
+		      <mesh filename="package://gluebot_support/meshes/tool.stl" scale="0.001 0.001 0.001"/>
 		    </geometry>
-			<origin rpy="0 0 0" xyz="0.043 0.043 0"/>
+			<origin rpy="0 0 0" xyz="0.044 -0.044 0.0141"/>
 		  </collision>
   </link>
 
