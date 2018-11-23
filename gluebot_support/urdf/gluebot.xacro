@@ -17,6 +17,18 @@
     wrist_3_lower_limit="${-pi}" wrist_3_upper_limit="${pi}"
   />
 
+  <material name="blue">
+    <color rgba="0 0 0.8 1"/>
+  </material>
+
+  <material name="grey">
+    <color rgba="0.8 0.8 0.8 1"/>
+  </material>
+
+  <material name="white">
+    <color rgba="1 1 1 1"/>
+  </material>
+
   <link name="world" />
 
   <link name="camera_frame"/>
@@ -48,6 +60,7 @@
         <mesh filename="package://gluebot_support/meshes/workcell_ur5_simple.stl"/>
       </geometry>
 		<origin rpy="0 0 0" xyz="0 0 0"/>
+    <material name="grey"/>
     </visual>
 		<collision>
 		    <geometry>
@@ -63,10 +76,43 @@
         <box size="0.75 1.2 0.05"/>
       </geometry>
 		  <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="white"/>
     </visual>
 		<collision>
 		    <geometry>
 		      <box size="0.75 1.2 0.05"/>>
+		    </geometry>
+			  <origin rpy="0 0 0" xyz="0 0 0"/>
+		</collision>
+  </link>
+
+  <link name="camera_protection">
+    <visual>
+      <geometry>
+        <box size="0.2 0.35 0.2"/>
+      </geometry>
+		  <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="grey"/>
+    </visual>
+		<collision>
+		    <geometry>
+		      <box size="0.2 0.35 0.2"/>>
+		    </geometry>
+			  <origin rpy="0 0 0" xyz="0 0 0"/>
+		</collision>
+  </link>
+
+  <link name="back_wall">
+    <visual>
+      <geometry>
+        <box size="0.1 2.0 2.0"/>
+      </geometry>
+		  <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="blue"/>
+    </visual>
+		<collision>
+		    <geometry>
+		      <box size="0.1 2.0 2.0"/>>
 		    </geometry>
 			  <origin rpy="0 0 0" xyz="0 0 0"/>
 		</collision>
@@ -117,6 +163,18 @@
     <parent link="world" />
     <child link = "table" />
     <origin xyz="${0.245 + 0.75/2} -0.15 ${-0.05 / 2 - 0.16715}" rpy="0 0 0" />
+  </joint>
+
+  <joint name="world_to_camera_protection" type="fixed">
+    <parent link="world" />
+    <child link = "camera_protection" />
+    <origin xyz="0.625 -0.195 0.872" rpy="0 0 0" />
+  </joint>
+
+   <joint name="world_to_back_wall" type="fixed">
+    <parent link="world" />
+    <child link = "back_wall" />
+    <origin xyz="-0.295 -0.195 ${-0.173 + 1}" rpy="0 0 0" />
   </joint>
 
   <joint name="world_to_base_link" type="fixed">
