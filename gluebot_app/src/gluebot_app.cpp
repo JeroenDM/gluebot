@@ -419,6 +419,8 @@ class GluebotApp
         {
             res.success = false;
             res.message = "Failed to plan approach path.";
+            //ROS_INFO_STREAM("Failed to plan to following joint position:");
+            //printJointPose(path_start);
             return true;
         }
 
