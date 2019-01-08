@@ -33,8 +33,9 @@ def create_response(request_msg):
   res = '{ "op": "service_response",'
   res += '"id": ' + request_id + ', '
   res += '"service": "/halcon",'
-  res += '"values": {"pose": {"x": 0.6, "y": 0.1, "theta": 90.0}},'
+  #res += '"values": {"pose": {"x": 0.6, "y": 0.1, "theta": 90.0}},'
   #res += '"values": {"pose": {"x": 0.6, "y": -0.2, "theta": 45}},'
+  res += '"values": {"pose": {"x": 0.7, "y": 0.15, "theta": -45}},'
   res += '"result": true'
   res += '}'
   return res

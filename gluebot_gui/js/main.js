@@ -41,6 +41,26 @@ function planPath() {
   });
 }
 
+var showPathClient = new ROSLIB.Service({
+  ros: ros,
+  name: "/show_path",
+  serviceType: "std_srvs/Trigger"
+});
+
+function showPath() {
+  var request = new ROSLIB.ServiceRequest({});
+
+  showPathClient.callService(request, function(result) {
+    console.log(
+        planPathClient.name +
+        ": " +
+        result.success +
+        " Info: " +
+        result.message
+    );
+  });
+}
+
 var executePathService = new ROSLIB.Service({
   ros: ros,
   name: "/execute_path",

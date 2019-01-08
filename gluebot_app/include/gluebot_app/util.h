@@ -21,7 +21,7 @@ descartes_core::TrajectoryPtPtr makeTolerancedCartesianPoint(const Eigen::Affine
 {
     using namespace descartes_core;
     using namespace descartes_trajectory;
-    return TrajectoryPtPtr(new AxialSymmetricPt(pose, M_PI / 2.0, AxialSymmetricPt::Z_AXIS));
+    return TrajectoryPtPtr(new AxialSymmetricPt(pose, 0.1, AxialSymmetricPt::Z_AXIS));
 }
 
 std::vector<descartes_core::TrajectoryPtPtr> makeDescartesTrajectory(EigenSTL::vector_Affine3d& path)

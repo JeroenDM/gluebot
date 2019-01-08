@@ -74,6 +74,15 @@ class VisualTools
         visual_tools_->trigger();
     }
 
+    void plotJointPosition(std::vector<double>& joint_pose)
+    {
+        auto robot_state_ptr =  visual_tools_->getSharedRobotState();
+        auto jmg = robot_state_ptr->getJointModelGroup("manipulator");
+        robot_state_ptr->setJointGroupPositions(jmg, joint_pose);
+        visual_tools_->publishRobotState(*robot_state_ptr, rviz_visual_tools::DEFAULT);
+        visual_tools_->trigger();
+    }
+
     // For visualizing things in rviz
     moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
 

@@ -1,5 +1,6 @@
 <launch>
   <node name="gluebot_app" type="gluebot_app" pkg="gluebot_app" output="screen"/>
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+  <!-- <include file="$(find rosbridge_server)/launch/rosbridge_tcp.launch" port="9091"/> -->
   <!-- <node name="glue_gun_server" type="glue_gun.py" pkg="gluebot_app" output="screen"/> -->
 </launch>
